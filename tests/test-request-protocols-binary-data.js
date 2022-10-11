@@ -31,7 +31,7 @@ var runSync = function() {
   xhr.send();
 }
 
-function logBinary(data, hdr) {
+function logBinary(data) {
   function log(data, idx) {
     return data.charCodeAt(idx).toString(16).padStart(2, '0');
   }
@@ -44,5 +44,5 @@ function logBinary(data, hdr) {
     str += `${log(data, data.length - 2)}${log(data, data.length - 1)}`;
   else
     str += `${log(data, data.length - 1)}`;
-  return hdr ? `${hdr}: ${str}` : str;
+  return str;
 }
