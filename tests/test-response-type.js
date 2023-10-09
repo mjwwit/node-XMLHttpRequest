@@ -1,0 +1,402 @@
+
+/******************************************************************************************
+ * This test validates xhr.responseType as described by:
+ *    sections 3.6.8, 3.6.9, 3.6.10 of https://xhr.spec.whatwg.org/#the-response-attribute
+ *    except xhr.responseType='document' is not yet supported.
+ * 
+ * 1) Create a simple min-webserver using the node http module.
+ * 2) Upload 2 different float32 arrays .
+ * 3) Upload the utf8 encoding of the underlying in-memory representations of 1).
+ * 4) Upload a stringified JSON object.
+ * 5) Then these 5 different uploads are downloaded as xhr.reponseType varies over
+ *      [ "text", "", "arraybuffer", "blob", "json" ]
+ *    and then various checks verify that the downloaded content is the same as that uploaded.
+ */
+// @ts-check
+'use strict';
+
+const http = require("http");
+
+const useLocalXHR = true;
+const XHRModule = useLocalXHR ? "../lib/XMLHttpRequest" : "xmlhttprequest-ssl";
+const { XMLHttpRequest } = require(XHRModule);
+
+const supressConsoleOutput = true;
+function log (...args) {
+  if ( !supressConsoleOutput)
+    console.debug(...args);
+}
+
+var serverProcess;
+
+/******************************************************************************************
+ * This section has various utility functions:
+ * 1) Convert typed array to binary string identical to underlying in-memory representation.
+ * 2) Convert string to typed array when the string is the in-memory representation of a Float32Array.
+ * 3) Display the underlying in-memory representation of the input string data.
+ * 4) Pause/sleep for t milliseconds.
+ * 5) Create a random Float32Array of length N.
+ * 6) Check to see if 2 array-like objects have the same elements.
+ * 7) Efficiently concatenate the input Array of Buffers.
+ */
+
+/**
+ * Create a string corresponding to the in-memory representation of typed array ta.
+ * @param {{ buffer: ArrayBuffer, length: number }} ta
+ * @returns {string}
+ */
+function typedArrayToString (ta) {
+  const u8 = new Uint8Array(ta.buffer);
+  return u8.reduce((acc, cur) => acc + String.fromCharCode(cur), "");
+}
+
+/**
+ * Assumes str is the in-memory representation of a Float32Array.
+ * Relies on the fact that the char codes in str are all <= 0xFF.
+ * Returns Float32Array corresponding to str.
+ *
+ * @param {string} str
+ * @returns {Float32Array}
+ */
+function stringToFloat32Array (str) {
+  const u8 = new Uint8Array(str.length);
+  for (let k = 0; k < str.length; k++)
+    u8[k] = Number(str.charCodeAt(k));
+  return new Float32Array(u8.buffer);
+}
+
+/**
+ * Create a random Float32Array of length N.
+ * @param {number} N
+ * @returns {Float32Array}
+ */
+function createFloat32Array (N) {
+  let ta = new Float32Array(N);
+  for (let k = 0; k < ta.length; k++)
+    ta[k] = Math.random();
+  return ta;
+}
+
+/**
+ * Check to see if 2 array-like objects have the same elements.
+ * @param {{ length: number }} ar1 
+ * @param {{ length: number }} ar2 
+ * @returns {boolean}
+ */
+function isEqual (ar1, ar2) {
+  if (ar1.length !== ar2.length)
+    return false;
+  for (let k = 0; k < ar1.length; k++)
+    if (ar1[k] !== ar2[k])
+      return false;
+  return true;
+}
+
+/**
+ * Efficiently concatenate the input Array of Buffers.
+ * Why not use Buffer.concat(...) ?
+ * Because bufTotal = Buffer.concat(...) often has byteOffset > 0, so bufTotal.buffer
+ * is larger than the useable region in bufTotal.
+ * @param {Array<Buffer>} bufferArray 
+ * @returns 
+ */
+function concat (bufferArray) {
+  var length = 0, offset = 0, k;
+  for (k = 0; k < bufferArray.length; k++)
+    length += bufferArray[k].length;
+  const result = Buffer.alloc(length);
+  for (k = 0; k < bufferArray.length; k++)
+  {
+    result.set(bufferArray[k], offset);
+    offset += bufferArray[k].length;
+  }
+  return result;
+};
+
+/******************************************************************************************
+ * This section produces a web server that serves up anything uploaded.
+ * The uploaded data is stored as values in a storage object, where the keys are the upload url suffixes.
+ * E.g.   storage['/F32'] === Buffer containing the corresponding upload.
+ */
+
+const storage = { ralph: [1,2] };
+
+function storageLength () {
+  const result = {};
+  for (const key in storage)
+    result[key] = storage[key].length;
+  return result;
+}
+function checkStorage () {
+  log('storage:', JSON.stringify(storageLength()));
+}
+
+// Xml doc for testing responseType "document"
+const xmlDoc =
+'<xml xmlns="a">'
++'  <child>test</child>'
++'  <child/>'
++'</xml>';
+
+/**
+ * Serves up anything uploaded.
+ * Tested with:
+ *   const urlF32    = "http://localhost:8888/F32";
+ *   const urlF32_2  = "http://localhost:8888/F32_2";
+ *   const urlUtf8   = "http://localhost:8888/Utf8";
+ *   const urlUtf8_2 = "http://localhost:8888/Utf8_2";
+ *   const urlJson   = "http://localhost:8888/Json";
+ *   const urlXml    = "http://localhost:8888/Xml";
+ */
+function createServer() {
+  serverProcess = http.createServer(function (req, res) {
+    req.on('error', err => { console.error('request:', err) });
+    res.on('error', err => { console.error('response:', err) });
+    if (req.method === 'POST') {
+      const chunks = [];
+      //req.on('data', chunk => chunks.push(chunk));
+      req.on('data', chunk => {
+        // console.log('foo', chunk.toString('utf8'));
+        // console.log('bar', JSON.parse(chunk.toString('utf8')));
+        // console.log('bar', unescape(chunk.toString('utf8')));
+        chunks.push(chunk);
+      });
+      req.on('end', () => {
+        const u8 = concat(chunks);
+        storage[req.url] = u8;
+        // console.log('server end-handler', req.url, u8.length, req.headers);
+        // console.log(u8.toString('utf8'));
+        // console.log('-------------------');
+        // console.log(xmlDoc);
+        return res
+            .writeHead(200, {"Content-Type": "application/octet-stream"})
+            .end(`success:len ${u8.length}`);
+      });
+    } else {
+      if (!storage[req.url])
+        return res
+          .writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
+          .end("Not in storage");
+
+      if (req.url === "/Utf8" || req.url === "/Utf8_2" || req.url === "/Json" || req.url === "/Xml")
+        return res
+          .writeHead(200, {"Content-Type": "text/plain; charset=utf8"})
+          .end(storage[req.url].toString());
+      return res
+        .writeHead(200, {"Content-Type": "application/octet-stream"})
+        .end(storage[req.url]);
+    }
+  }).listen(8888);
+  process.on("SIGINT", function () {
+    if (serverProcess)
+      serverProcess.close();
+    serverProcess = null;
+  });
+}
+createServer();
+
+/******************************************************************************************
+ * This section creates:
+ * 1) An upload function that POSTs using xmlhttprequest-ssl.
+ * 2) A download function that GETs using xmlhttprequest-ssl and allows sepcifying xhr.responseType.
+ */
+
+function upload(xhr, url, data) {
+  return new Promise((resolve, reject) => {
+    xhr.open("POST", url, true);
+
+    xhr.onloadend = () => {
+      if (xhr.status >= 200 && xhr.status < 300)
+        resolve(xhr.responseText);
+      else
+      {
+        const errorTxt = `${xhr.status}: ${xhr.statusText}`;
+        reject(errorTxt);
+      }
+    };
+
+    xhr.setRequestHeader('Content-Type', 'multipart/form-data'); // Unnecessary.
+    xhr.send(data);
+  });
+}
+
+function download (xhr, url, responseType = 'arraybuffer')
+{
+  return new Promise((resolve, reject) => {
+    xhr.open("GET", url, true);
+
+    xhr.responseType =  responseType;
+
+    xhr.onloadend = () => {
+      if (xhr.status >= 200 && xhr.status < 300)
+      {
+        switch (responseType)
+        {
+          case "":
+          case "text":
+            resolve(xhr.responseText);
+            break;
+          case "document":
+            resolve(xhr.responseXML);
+            break;
+          default:
+            resolve(xhr.response);
+            break;
+        }
+      }
+      else
+      {
+        const errorTxt = `${xhr.status}: ${xhr.statusText}`;
+        reject(errorTxt);
+      }
+    };
+
+    xhr.send();
+  });
+}
+
+/******************************************************************************************
+ * This section:
+ * 1) Uploads 2 different float32 arrays .
+ * 2) Uploads the utf8 encoding of the underlying in-memory representations of 1).
+ * 3) Uploads a stringified JSON object.
+ * 4) Then these 5 different uploads are downloaded as xhr.reponseType varies over
+ *      [ "text", "", "arraybuffer", "blob", "json" ]
+ *    and then various checks verify that the downloaded content is the same as that uploaded.
+ */
+
+const N = 1 * 1000 * 1000;
+const _f32 = createFloat32Array(N);
+const _f32_2 = new Float32Array([ 1, 5, 6, 7, 2, 8 ]);
+
+const F32 = Buffer.from(_f32.buffer);
+const F32_2 = Buffer.from(_f32_2.buffer);
+const F32Utf8 = Buffer.from(typedArrayToString(_f32), 'utf8');
+const F32Utf8_2 = Buffer.from(typedArrayToString(_f32_2), 'utf8');
+
+const urlF32    = "http://localhost:8888/F32";
+const urlF32_2  = "http://localhost:8888/F32_2";
+const urlUtf8   = "http://localhost:8888/Utf8";
+const urlUtf8_2 = "http://localhost:8888/Utf8_2";
+const urlJson   = "http://localhost:8888/Json";
+const urlXml    = "http://localhost:8888/Xml";
+
+const xhr = new XMLHttpRequest();
+
+/**
+ * 1) Upload Float32Array of length N=1,000,000.
+ *    Then download using xhr.responseType="arraybuffer" and check the the array lengths are the same.
+ * 2) Convert the Float32Array of 1) into a string, utf8 encode it and upload it.
+ *    Then download using xhr.responseType="text" and check the the string length is the same as the
+ *    byteLength of the array in 1). Downloading as "text" decodes the utf8 into the original.
+ * 3) Upload Float32Array([1, 5, 6, 7, 2, 8]).
+ *    Then download using xhr.responseType="blob", extract the contained arrayBuffer, view it as 
+ *    a Float32Aray and check that the contents are identical.
+ * 4) Convert the Float32Array of 3) into a string, utf8 encode it and upload it.
+ *    Then download using xhr.responseType="" and check the the string length is the same as the
+ *    byteLength of the array in 3). Downloading as "" decodes the utf8 into the original.
+ * 5) Let testJson be the current mini-webserver storage object:
+ *       e.g. testJson = {ralph:2,'/F32':4000000,'/Utf8':5333575,'/F32_2':24,'/Utf8_2':28,'/Xml':56,'/Json':77}
+ *    Upload JSON.stringify(testJson) and download it using xhr.responseType="json"
+ *    Check that the objects are the same by comparing the strings after calling JSON.stringify. 
+ * 6) Did a test of xhr.responseType="document" using a simple xml example.
+ */
+async function runTest() {
+  const type = (o) => { return `type=${o?.constructor?.name}`; };
+  try {
+  let r = await upload(xhr, urlF32, F32);  // big
+  log('upload urlF32,    F32      ', r);
+  r = await upload(xhr, urlUtf8, F32Utf8); // big
+  log('upload urlUtf8,   F32Utf8  ', r);
+
+  r = await upload(xhr, urlF32_2, F32_2);
+  log('upload urlF32_2,  F32_2    ', r);
+  r = await upload(xhr, urlUtf8_2, F32Utf8_2);
+  log('upload urlUtf8_2, F32Utf8_2', r);
+
+  r = await upload(xhr, urlXml, JSON.stringify(xmlDoc));
+  log('upload:urlXml,    xmlDoc   ', r);
+
+  const testJson = storageLength();
+  r = await upload(xhr, urlJson, JSON.stringify(testJson));
+  log('upload:urlJson,   storage  ', r);
+
+  log('-----------------------------------------------------------------------------------');
+  checkStorage(); // Check what's in the mini-webserver storage.
+  log('-----------------------------------------------------------------------------------');
+
+  const ab = await download(xhr, urlF32, 'arraybuffer'); // big
+  const f32 = new Float32Array(ab)
+  log('download urlF32    arraybuf', f32.byteLength, type(ab));
+  if (f32.byteLength !== F32.length)
+    throw new Error(`Download from urlF32 has incorrect length: ${f32.byteLength} !== ${F32.length}`);
+
+  const text1 = await download(xhr, urlUtf8, 'text'); // big
+  log('download urlUtf8       text', text1.length, type(text1));
+  if (f32.byteLength !== text1.length)
+    throw new Error(`Download from urlUtf8 has incorrect length: ${f32.byteLength} !== ${text1.length}`);
+
+  if (typeof Blob === 'function') { // Check to see if Blob exists.
+    const blob = await download(xhr, urlF32_2, 'blob');
+    const blob_ab = await blob.arrayBuffer();
+    const blob_f32 = new Float32Array(blob_ab);
+    log(`download urlF32_2      blob ${blob_f32.byteLength} ${type(blob)}  `, blob_f32);
+    if (!isEqual(blob_f32, _f32_2))
+      throw new Error(`Download from urlF32_2 has incorrect content: ${blob_f32} !== ${_f32_2}`);
+  } else {
+    // If Blob doesn't exist (node versions < 18), then use xhr.responseType="arraybuffer".
+    const ab_2 = await download(xhr, urlF32_2, 'arraybuffer');
+    const ab_2_f32 = new Float32Array(ab_2);
+    log(`download urlF32_2  arraybuf ${ab_2_f32.byteLength} ${type(ab_2)}`, ab_2_f32);
+    if (!isEqual(ab_2_f32, _f32_2))
+      throw new Error(`Download from urlF32_2 has incorrect content: ${ab_2_f32} !== ${_f32_2}`);
+  }
+
+  const text2 = await download(xhr, urlUtf8_2, '');
+  const text2_f32 = stringToFloat32Array(text2);
+  log('download urlUtf8_2  default', text2.length, type(text2), text2_f32);
+  if (!isEqual(text2_f32, _f32_2))
+    throw new Error(`Download from urlUtf8_2 has incorrect content: ${text2_f32} !== ${_f32_2}`);
+
+  try {
+    const { XMLSerializer } = require('@xmldom/xmldom'); // Throws when xmldom not installed.
+    const doc = await download(xhr, urlXml, 'document');
+    const serialized = new XMLSerializer().serializeToString(doc);
+    const html = serialized.replace(/\t/g, '  ');
+    log(`download urlXml    document ${html.length}`, type(doc), html);
+    if (html !== xmlDoc)
+      throw new Error(`Download from urlXml has incorrect content:\n  ${html} !== ${xmlDoc}`);
+  } catch (e) {
+    if (e?.code === 'MODULE_NOT_FOUND') {
+      console.error('Please install npmjs package @xmldom/xmldom to test xhr.responseType==="document"');
+      console.info('XMLHttpRequest.js also needs access to @xmldom/xmldom');
+    } else {
+      throw e; // rethrow
+    }
+  }
+
+  const json = await download(xhr, urlJson, 'json');
+  log(`download urlJson       json ${JSON.stringify(json).length}`, type(json), json);
+  if (JSON.stringify(json) !== JSON.stringify(testJson))
+    throw new Error(`Download from urlJson has incorrect content:\n  ${JSON.stringify(json)} !== ${JSON.stringify(testJson)}`);
+  
+  } catch (e) {
+    log('BOOM',  e);
+    throw e; // rethrow
+  }
+}
+
+/**
+ * Run the test. 
+ * If runTest() fails, an exception will be thrown.
+ */
+setTimeout(function () {
+  runTest()
+    .then(() => { console.log("PASSED"); })
+    .catch((e) => { console.log("FAILED"); throw e; })
+    .finally(() => {
+      if (serverProcess)
+        serverProcess.close();
+      serverProcess = null;
+    });
+}, 100);
