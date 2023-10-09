@@ -121,5 +121,5 @@ function runTest() {
 
   assert(isSync, "XMLHttpRequest was not synchronous");
 
-  log("done");
+  console.log("done");
 }

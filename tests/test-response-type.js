@@ -1,7 +1,7 @@
 
 /******************************************************************************************
  * This test validates xhr.responseType as described by:
- *    sections 3.6.8, 3.6.9, 3.6.10 of https://xhr.spec.whatwg.org/#the-response-attribute
+ *    section 3.6, subsections 8,9,10,11 of https://xhr.spec.whatwg.org/#the-response-attribute
  *    except xhr.responseType='document' is not yet supported.
  * 
  * 1) Create a simple min-webserver using the node http module.
