@@ -179,6 +179,10 @@ const urlUtf8 = "http://localhost:8888/binaryUtf8";
 function Get(url, isUtf8) {
   return new Promise((resolve, reject) => {
     xhr.open("GET", url, true);
+    if (isUtf8)
+      xhr.responseType = 'text';
+    else
+      xhr.responseType = 'arraybuffer';
     xhr.onloadend = function(event) {
 
       log('xhr.status:', xhr.status);
@@ -189,7 +193,7 @@ function Get(url, isUtf8) {
 
         const dataTxt = xhr.responseText;
         const data = xhr.response;
-        assert(dataTxt && data);
+        assert(data);
 
         log('XHR GET:', contentType, dataTxt.length, data.length, data.toString('utf8').length);
         log('XHR GET:', data.constructor.name, dataTxt.constructor.name);
