@@ -24,7 +24,7 @@
     "node": ">=0.4.0"
   },
   "scripts": {
-    "test": "cd ./tests && node test-constants.js && node test-events.js && node test-exceptions.js && node test-headers.js && node test-redirect-302.js && node test-redirect-303.js && node test-redirect-307.js && node test-request-methods.js && node test-request-protocols-txt-data.js && node test-request-protocols-binary-data.js && node test-sync-response.js && node test-utf8-tearing.js"
+    "test": "cd ./tests && node test-constants.js && node test-events.js && node test-exceptions.js && node test-headers.js && node test-redirect-302.js && node test-redirect-303.js && node test-redirect-307.js && node test-request-methods.js && node test-request-protocols-txt-data.js && node test-request-protocols-binary-data.js && node test-sync-response.js && node test-utf8-tearing.js && node test-keepalive.js"
   },
   "directories": {
     "lib": "./lib",

@@ -12,6 +12,8 @@ var server = http.createServer(function (req, res) {
   assert.equal("node-XMLHttpRequest-test", req.headers["user-agent"]);
   // Test header set with blacklist disabled
   assert.equal("http://github.com", req.headers["referer"]);
+  // Test case insensitive header was set
+  assert.equal("text/plain", req.headers["content-type"]);
 
   var body = "Hello World";
   res.writeHead(200, {
@@ -53,13 +55,16 @@ xhr.onreadystatechange = function() {
 
 assert.equal(null, xhr.getResponseHeader("Content-Type"));
 try {
-  xhr.open("GET", "http://localhost:8000/");
+  xhr.open("POST", "http://localhost:8000/");
+  var body = "Hello World";
   // Valid header
   xhr.setRequestHeader("X-Test", "Foobar");
   // Invalid header
-  xhr.setRequestHeader("Content-Length", 0);
+  xhr.setRequestHeader("Content-Length", Buffer.byteLength(body));
   // Allowed header outside of specs
   xhr.setRequestHeader("user-agent", "node-XMLHttpRequest-test");
+  // Case insensitive header
+  xhr.setRequestHeader("content-type", 'text/plain');
   // Test getRequestHeader
   assert.equal("Foobar", xhr.getRequestHeader("X-Test"));
   // Test invalid header
@@ -70,7 +75,7 @@ try {
   xhr.setRequestHeader("Referer", "http://github.com");
   assert.equal("http://github.com", xhr.getRequestHeader("Referer"));
 
-  xhr.send();
+  xhr.send(body);
 } catch(e) {
   console.log("ERROR: Exception raised", e);
 }
