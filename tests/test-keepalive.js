@@ -1,24 +1,21 @@
-const http = require('node:http');
+var http = require('http');
+var { XMLHttpRequest } = require("../lib/XMLHttpRequest");
 
-const useLocalXHR = true;
-const XHRModule = useLocalXHR ? "../lib/XMLHttpRequest" : "xmlhttprequest-ssl";
-const { XMLHttpRequest } = require(XHRModule);
-
-const server = http.createServer({ keepAliveTimeout: 200 }, (req, res) => {
+var server = http.createServer({ keepAliveTimeout: 200 }, function handleConnection (req, res) {
   res.write('hello\n');
   res.end();
 }).listen(8889);
 
-const agent = new http.Agent({
+var agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 2000,
 });
-const xhr = new XMLHttpRequest({ agent });
-const url = "http://localhost:8889";
+var xhr = new XMLHttpRequest({ agent });
+var url = "http://localhost:8889";
 
 var repeats = 0;
 var maxMessages = 20;
-const interval = setInterval(() => {
+const interval = setInterval(function sendRequest() {
   xhr.open("GET", url);
   xhr.onloadend = function(event) {
     if (xhr.status !== 200) {
@@ -27,7 +24,7 @@ const interval = setInterval(() => {
       server.close();
     }
     if (repeats++ > maxMessages) {
-      console.log('Done.')
+      console.log('Done.');
       clearInterval(interval);
       server.close();
     }
