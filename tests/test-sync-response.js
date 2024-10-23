@@ -121,5 +121,21 @@ function runTest() {
 
   assert(isSync, "XMLHttpRequest was not synchronous");
 
+  xhr = new XMLHttpRequest();
+  isSync = false;
+
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      assert.equal(xhr.response.toString(), 'Hello world!');
+      assert.equal(xhr.getResponseHeader('content-type'), 'application/octet-stream')
+      isSync = true;
+    }
+  }
+
+  xhr.open("GET", "http://localhost:8888/binary1", false);
+  xhr.send();
+
+  assert(isSync, "XMLHttpRequest was not synchronous");
+
   console.log("done");
 }
