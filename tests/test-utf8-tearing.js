@@ -16,14 +16,11 @@
 // @ts-check
 'use strict';
 
-const assert = require("assert");
-const http = require("http");
+var assert = require("assert");
+var http = require("http");
+var { XMLHttpRequest } = require("../lib/XMLHttpRequest");
 
-const useLocalXHR = true;
-const XHRModule = useLocalXHR ? "../lib/XMLHttpRequest" : "xmlhttprequest-ssl";
-const { XMLHttpRequest } = require(XHRModule);
-
-const supressConsoleOutput = true;
+var supressConsoleOutput = true;
 function log (...args) {
   if ( !supressConsoleOutput)
     console.debug(...args);
@@ -47,8 +44,8 @@ var serverProcess;
  * @returns {string}
  */
 function ta_to_hexStr(ta) {
-  const u8 = new Uint8Array(ta.buffer);
-  return u8.reduce((acc, cur) => acc + String.fromCharCode(cur), "");
+  var u8 = new Uint8Array(ta.buffer);
+  return u8.reduce(function (acc, cur) { return acc + String.fromCharCode(cur), ""});
 }
 
 /**
@@ -65,8 +62,8 @@ function createFloat32Array(N) {
   //ta = new Float32Array([1, 5, 6, 7]); // Use to debug
   return ta;
 }
-const N = 1 * 1000 * 1000; // Needs to be big enough to tear a few utf8 sequences.
-const f32 = createFloat32Array(N);
+var N = 1 * 1000 * 1000; // Needs to be big enough to tear a few utf8 sequences.
+var f32 = createFloat32Array(N);
 
 /**
  * From a Float32Array f32 transform into:
@@ -77,12 +74,12 @@ const f32 = createFloat32Array(N);
  * @returns {{ buffer: Buffer, bufferUtf8: Buffer }}
  */
 function createBuffers(f32) {
-  const buffer = Buffer.from(f32.buffer);
-  const ss = ta_to_hexStr(f32);
-  const bufferUtf8 = Buffer.from(ss, 'utf8'); // Encode ss in utf8
+  var buffer = Buffer.from(f32.buffer);
+  var ss = ta_to_hexStr(f32);
+  var bufferUtf8 = Buffer.from(ss, 'utf8'); // Encode ss in utf8
   return { buffer, bufferUtf8 };
 }
-const { buffer, bufferUtf8 } = createBuffers(f32);
+var { buffer, bufferUtf8 } = createBuffers(f32);
 
 /**
  * Serves up buffer at
@@ -134,7 +131,7 @@ createServer(buffer, bufferUtf8);
  * @returns {Float32Array}
  */
 function hexStr_to_ta(hexStr) {
-  const u8 = new Uint8Array(hexStr.length);
+  var u8 = new Uint8Array(hexStr.length);
   for (let k = 0; k < hexStr.length; k++)
     u8[k] = Number(hexStr.charCodeAt(k));
   return new Float32Array(u8.buffer);
@@ -163,9 +160,9 @@ function checkEnough(ta1, ta2, count = 1000) {
   return true;
 }
 
-const xhr = new XMLHttpRequest();
-const url = "http://localhost:8888/binary";
-const urlUtf8 = "http://localhost:8888/binaryUtf8";
+var xhr = new XMLHttpRequest();
+var url = "http://localhost:8888/binary";
+var urlUtf8 = "http://localhost:8888/binaryUtf8";
 
 /**
  * Send a GET request to the server.
@@ -177,18 +174,18 @@ const urlUtf8 = "http://localhost:8888/binaryUtf8";
  * @returns {Promise<Float32Array>}
  */
 function Get(url, isUtf8) {
-  return new Promise((resolve, reject) => {
+  return new Promise(function (resolve, reject) {
     xhr.open("GET", url, true);
     xhr.onloadend = function(event) {
 
       log('xhr.status:', xhr.status);
 
       if (xhr.status >= 200 && xhr.status < 300) {
-        const contentType = xhr.getResponseHeader('content-type');
+        var contentType = xhr.getResponseHeader('content-type');
         assert.equal(contentType, 'application/octet-stream');
 
-        const dataTxt = xhr.responseText;
-        const data = xhr.response;
+        var dataTxt = xhr.responseText;
+        var data = xhr.response;
         assert(dataTxt && data);
 
         log('XHR GET:', contentType, dataTxt.length, data.length, data.toString('utf8').length);
@@ -197,7 +194,7 @@ function Get(url, isUtf8) {
         if (isUtf8 && dataTxt.length !== data.toString('utf8').length)
           throw new Error("xhr.responseText !== xhr.response.toString('utf8')");
 
-        const ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
+        var ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
         log('XHR GET:', ta.constructor.name, ta.length, ta[0], ta[1]);
 
         if (!checkEnough(ta, f32))
@@ -225,7 +222,7 @@ function Get(url, isUtf8) {
  */
 function runTest() {
   return Get(urlUtf8, true)
-    .then(() => { return Get(url, false); });
+    .then(function () { return Get(url, false); });
 }
 
 /**
@@ -233,8 +230,8 @@ function runTest() {
  */
 setTimeout(function () {
   runTest()
-    .then((ta) => { console.log("done", ta?.length); })
-    .finally(() => {
+    .then(function (ta) { console.log("done", ta?.length); })
+    .finally(function () {
       if (serverProcess)
         serverProcess.close();
       serverProcess = null;
