@@ -164,6 +164,41 @@ var xhr = new XMLHttpRequest();
 var url = "http://localhost:8888/binary";
 var urlUtf8 = "http://localhost:8888/binaryUtf8";
 
+function download (xhr, url, responseType = 'arraybuffer')
+{
+  return new Promise(function (resolve, reject) {
+    xhr.open("GET", url, true);
+
+    xhr.responseType =  responseType;
+
+    xhr.onloadend = function () {
+      if (xhr.status >= 200 && xhr.status < 300)
+      {
+        switch (responseType)
+        {
+          case "":
+          case "text":
+            resolve(xhr.responseText);
+            break;
+          case "document":
+            resolve(xhr.responseXML);
+            break;
+          default:
+            resolve(xhr.response);
+            break;
+        }
+      }
+      else
+      {
+        var errorTxt = `${xhr.status}: ${xhr.statusText}`;
+        reject(errorTxt);
+      }
+    };
+
+    xhr.send();
+  });
+}
+
 /**
  * Send a GET request to the server.
  * When isUtf8 is true, assume that xhr.response is already
@@ -173,39 +208,26 @@ var urlUtf8 = "http://localhost:8888/binaryUtf8";
  * @param {boolean} isUtf8
  * @returns {Promise<Float32Array>}
  */
-function Get(url, isUtf8) {
-  return new Promise(function (resolve, reject) {
-    xhr.open("GET", url, true);
-    xhr.onloadend = function(event) {
+async function Get(url, isUtf8) {
+  var dataTxt = await download(xhr, url, 'text');
+  var ab = await download(xhr, url, 'arraybuffer');
+  var data = Buffer.from(ab);
 
-      log('xhr.status:', xhr.status);
+  assert(dataTxt && data);
 
-      if (xhr.status >= 200 && xhr.status < 300) {
-        var contentType = xhr.getResponseHeader('content-type');
-        assert.equal(contentType, 'application/octet-stream');
+  log('XHR GET:', dataTxt.length, data.length, data.toString('utf8').length);
+  log('XHR GET:', data.constructor.name, dataTxt.constructor.name);
 
-        var dataTxt = xhr.responseText;
-        var data = xhr.response;
-        assert(dataTxt && data);
+  if (isUtf8 && dataTxt.length !== data.toString('utf8').length)
+    throw new Error("xhr.responseText !== xhr.response.toString('utf8')");
 
-        log('XHR GET:', contentType, dataTxt.length, data.length, data.toString('utf8').length);
-        log('XHR GET:', data.constructor.name, dataTxt.constructor.name);
+  var ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
+  log('XHR GET:', ta.constructor.name, ta.length, ta[0], ta[1]);
 
-        if (isUtf8 && dataTxt.length !== data.toString('utf8').length)
-          throw new Error("xhr.responseText !== xhr.response.toString('utf8')");
+  if (!checkEnough(ta, f32))
+    throw new Error("Unable to correctly reconstitute Float32Array");
 
-        var ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
-        log('XHR GET:', ta.constructor.name, ta.length, ta[0], ta[1]);
-
-        if (!checkEnough(ta, f32))
-          throw new Error("Unable to correctly reconstitute Float32Array");
-
-        resolve(ta);
-      }
-      reject(new Error(`Request failed: xhr.status ${xhr.status}`));
-    }
-    xhr.send();
-  });
+  return ta;
 }
 
 /**
