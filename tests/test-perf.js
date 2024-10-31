@@ -7,14 +7,12 @@
 
 const http = require("http");
 
-const useLocalXHR = true;
-const XHRModule = useLocalXHR ? "../lib/XMLHttpRequest" : "xmlhttprequest-ssl";
-const { XMLHttpRequest } = require(XHRModule);
+const XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 
 const supressConsoleOutput = false;
-function log (...args) {
+function log (_) {
   if ( !supressConsoleOutput)
-    console.debug(...args);
+    console.log(arguments);
 }
 
 var serverProcess;
@@ -92,19 +90,16 @@ function createServer() {
         const u8 = concat(chunks);
         storage[req.url] = u8;
         // console.log('server end-handler', req.url, u8.length, req.headers);
-        return res
-            .writeHead(200, {"Content-Type": "application/octet-stream"})
-            .end(`success:len ${u8.length}`);
+        res.writeHead(200, {"Content-Type": "application/octet-stream"})
+        res.end(`success:len ${u8.length}`);
       });
     } else {
       if (!storage[req.url])
-        return res
-          .writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
-          .end("Not in storage");
+        res.writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
+        res.end("Not in storage");
 
-      return res
-        .writeHead(200, {"Content-Type": "application/octet-stream"})
-        .end(storage[req.url]);
+      res.writeHead(200, {"Content-Type": "application/octet-stream"})
+      res.end(storage[req.url]);
     }
   }).listen(8888);
   process.on("SIGINT", function () {
@@ -140,8 +135,9 @@ function upload(xhr, url, data) {
   });
 }
 
-function download (xhr, url, responseType = 'arraybuffer')
+function download (xhr, url, responseType)
 {
+  responseType = responseType || 'arraybuffer';
   return new Promise((resolve, reject) => {
     xhr.open("GET", url, true);
 
@@ -189,35 +185,40 @@ const F32 = Buffer.from(_f32.buffer);
 const urlF32 = "http://localhost:8888/F32";
 
 const xhr = new XMLHttpRequest();
+var handle, success, _t0;
 
 /**
  * 1) Upload Float32Array of length N=100,000,000.
  *    Then download using xhr.responseType="arraybuffer" and check the the array lengths are the same.
  */
-async function runTest() {
-  try {
-  let r = await upload(xhr, urlF32, F32);  // big
+function runTest() {
+  let r = upload(xhr, urlF32, F32);  // big
+  return r.then(afterUpload)
+}
+
+function afterUpload(r) {
   log('upload urlF32,    F32      ', r);
 
   log('-----------------------------------------------------------------------------------');
   checkStorage(); // Check what's in the mini-webserver storage.
   log('-----------------------------------------------------------------------------------');
 
-  const _t0 = Date.now();
-  let success = true;
-  const handle = setTimeout(() => {
+  _t0 = Date.now();
+  success = true;
+  handle = setTimeout(() => {
     console.error('Download has taken longer than 5 seconds and hence it has failed!');
     success = false;
   }, 5 * 1000)
-  const ab = await download(xhr, urlF32, 'arraybuffer'); // big
+  const ab = download(xhr, urlF32, 'arraybuffer'); // big
+  return ab.then(afterDownload);
+}
+
+function afterDownload(ab) {
   clearTimeout(handle);
   console.log(`Download elapsed time:, ${Date.now() - _t0}ms`, ab.byteLength);
   console.info(['...waiting to see elapsed time of download...'])
   if (!success)
     throw new Error("Download has taken far too long!");
-  } catch (e) {
-    console.log('BOOM',  e);
-  }
 }
 
 /**
@@ -226,11 +227,12 @@ async function runTest() {
  */
 setTimeout(function () {
   runTest()
-    .then(() => { console.log("PASSED"); })
-    .catch((e) => { console.log("FAILED"); throw e; })
-    .finally(() => {
-      if (serverProcess)
-        serverProcess.close();
-      serverProcess = null;
-    });
+    .then(() => { console.log("PASSED"); shutdown(); })
+    .catch((e) => { console.log("FAILED", e); shutdown(); throw e; });
 }, 100);
+
+function shutdown() {
+  if (serverProcess)
+    serverProcess.close();
+  serverProcess = null;
+}

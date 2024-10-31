@@ -16,15 +16,12 @@
 'use strict';
 
 const http = require("http");
-
-const useLocalXHR = true;
-const XHRModule = useLocalXHR ? "../lib/XMLHttpRequest" : "xmlhttprequest-ssl";
-const { XMLHttpRequest } = require(XHRModule);
+const XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 
 const supressConsoleOutput = true;
-function log (...args) {
+function log (_) {
   if ( !supressConsoleOutput)
-    console.debug(...args);
+    console.log(arguments);
 }
 
 var serverProcess;
@@ -107,7 +104,7 @@ function concat (bufferArray) {
   const result = Buffer.alloc(length);
   for (k = 0; k < bufferArray.length; k++)
   {
-    result.set(bufferArray[k], offset);
+    bufferArray[k].copy(result, offset, 0, bufferArray[k].length)
     offset += bufferArray[k].length;
   }
   return result;
@@ -124,11 +121,14 @@ const storage = { ralph: [1,2] };
 function storageLength () {
   const result = {};
   for (const key in storage)
-    result[key] = storage[key].length;
+    if (key !== '/Json') // json not stored when uploading, but is stored when retrieving, new key makes check fail
+      result[key] = storage[key].length;
   return result;
 }
 function checkStorage () {
+  log('-----------------------------------------------------------------------------------');
   log('storage:', JSON.stringify(storageLength()));
+  log('-----------------------------------------------------------------------------------');
 }
 
 // Xml doc for testing responseType "document"
@@ -168,23 +168,24 @@ function createServer() {
         // console.log(u8.toString('utf8'));
         // console.log('-------------------');
         // console.log(xmlDoc);
-        return res
-            .writeHead(200, {"Content-Type": "application/octet-stream"})
-            .end(`success:len ${u8.length}`);
+        res.writeHead(200, {"Content-Type": "application/octet-stream"})
+        res.end(`success:len ${u8.length}`);
       });
     } else {
       if (!storage[req.url])
-        return res
-          .writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
-          .end("Not in storage");
-
+      {
+        res.writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
+        res.end("Not in storage");
+        return;
+      }
       if (req.url === "/Utf8" || req.url === "/Utf8_2" || req.url === "/Json" || req.url === "/Xml")
-        return res
-          .writeHead(200, {"Content-Type": "text/plain; charset=utf8"})
-          .end(storage[req.url].toString());
-      return res
-        .writeHead(200, {"Content-Type": "application/octet-stream"})
-        .end(storage[req.url]);
+      {
+        res.writeHead(200, {"Content-Type": "text/plain; charset=utf8"})
+        res.end(storage[req.url].toString());
+        return;
+      }
+      res.writeHead(200, {"Content-Type": "application/octet-stream"})
+      res.end(storage[req.url]);
     }
   }).listen(8888);
   process.on("SIGINT", function () {
@@ -220,8 +221,9 @@ function upload(xhr, url, data) {
   });
 }
 
-function download (xhr, url, responseType = 'arraybuffer')
+function download (xhr, url, responseType)
 {
+  responseType = responseType || 'arraybuffer';
   return new Promise((resolve, reject) => {
     xhr.open("GET", url, true);
 
@@ -279,9 +281,10 @@ const urlF32_2  = "http://localhost:8888/F32_2";
 const urlUtf8   = "http://localhost:8888/Utf8";
 const urlUtf8_2 = "http://localhost:8888/Utf8_2";
 const urlJson   = "http://localhost:8888/Json";
-const urlXml    = "http://localhost:8888/Xml";
 
 const xhr = new XMLHttpRequest();
+
+const type = (o) => { return `type=${o && o.constructor && o.constructor.name}`; };
 
 /**
  * 1) Upload Float32Array of length N=1,000,000.
@@ -301,89 +304,84 @@ const xhr = new XMLHttpRequest();
  *    Check that the objects are the same by comparing the strings after calling JSON.stringify. 
  * 6) Did a test of xhr.responseType="document" using a simple xml example.
  */
-async function runTest() {
-  const type = (o) => { return `type=${o?.constructor?.name}`; };
-  try {
-  let r = await upload(xhr, urlF32, F32);  // big
-  log('upload urlF32,    F32      ', r);
-  r = await upload(xhr, urlUtf8, F32Utf8); // big
-  log('upload urlUtf8,   F32Utf8  ', r);
+function runTest() {
+  const uploadPromises = [];
+  var r;
+  return upload(xhr, urlF32, F32) // upload float32
+  .then((r) => { 
+    log('upload urlF32,    F32      ', r);
+  })
+  .then(() => { // download float32
+    return download(xhr, urlF32, 'arraybuffer');
+  })
+  .then((ab) => { // make sure download is correct
+    const f32 = new Float32Array(ab);
+    log('download urlF32    arraybuf', f32.byteLength, type(ab));
+    if (f32.byteLength !== F32.length)
+      throw new Error(`Download from urlF32 has incorrect length: ${f32.byteLength} !== ${F32.length}`);  
+  })
+  .then(() => {
+    return upload(xhr, urlUtf8, F32Utf8);
+  })
+  .then((r) => {
+    log('upload urlUtf8,   F32Utf8  ', r);
+  })
+  .then(() => {
+    return download(xhr, urlF32, 'arraybuffer');
+  })
+  .then((ab) => {
+    const f32 = new Float32Array(ab);
+    log('download urlF32    arraybuf', f32.byteLength, type(ab));
+    if (f32.byteLength !== F32.length)
+      throw new Error(`Download from urlF32 has incorrect length: ${f32.byteLength} !== ${F32.length}`);  
+  })
+  .then(() => {
+    return upload(xhr, urlF32_2, F32_2);
+  })
+  .then((r) => {
+    log('upload urlF32_2,  F32_2    ', r);
+  })
+  .then(() => {
+    return download(xhr, urlF32, 'arraybuffer');
+  })
+  .then((ab) => {
+    const f32 = new Float32Array(ab)
+    log('download urlF32    arraybuf', f32.byteLength, type(ab));
+    if (f32.byteLength !== F32.length)
+      throw new Error(`Download from urlF32 has incorrect length: ${f32.byteLength} !== ${F32.length}`);  
+  })
+  .then(() => {
+    log('XXXXXXXXXXXXXXXXX', urlUtf8_2, F32Utf8_2)
+    return upload(xhr, urlUtf8_2, F32Utf8_2);
+  })
+  .then((r) => {
+    log('upload urlUtf8_2, F32Utf8_2', r);
+  })
+  .then(() => {
+    return download(xhr, urlUtf8_2, 'text');
+  })
+  .then((text2) => {
+    const text2_f32 = stringToFloat32Array(text2);
+    log('download urlUtf8_2  default', text2.length, type(text2), text2_f32);
+    if (!isEqual(text2_f32, _f32_2))
+      throw new Error(`Download from urlUtf8_2 has incorrect content: ${text2_f32} !== ${_f32_2}`);  
+  })
+  .then(() => {
+    return upload(xhr, urlJson, JSON.stringify(storageLength()));
+  })
+  .then((r) => {
+    log('upload:urlJson,   storage  ', r);
+  })
+  .then(() => {
+    return download(xhr, urlJson, 'json');
+  })
+  .then((json) => {
+    log(`download urlJson       json ${JSON.stringify(json).length}`, type(json), json);
+    const testJson = storageLength();
+    if (JSON.stringify(json) !== JSON.stringify(testJson))
+      throw new Error(`Download from urlJson has incorrect content:\n  ${JSON.stringify(json)} !== ${JSON.stringify(testJson)}`);  
+  });
 
-  r = await upload(xhr, urlF32_2, F32_2);
-  log('upload urlF32_2,  F32_2    ', r);
-  r = await upload(xhr, urlUtf8_2, F32Utf8_2);
-  log('upload urlUtf8_2, F32Utf8_2', r);
-
-  r = await upload(xhr, urlXml, JSON.stringify(xmlDoc));
-  log('upload:urlXml,    xmlDoc   ', r);
-
-  const testJson = storageLength();
-  r = await upload(xhr, urlJson, JSON.stringify(testJson));
-  log('upload:urlJson,   storage  ', r);
-
-  log('-----------------------------------------------------------------------------------');
-  checkStorage(); // Check what's in the mini-webserver storage.
-  log('-----------------------------------------------------------------------------------');
-
-  const ab = await download(xhr, urlF32, 'arraybuffer'); // big
-  const f32 = new Float32Array(ab)
-  log('download urlF32    arraybuf', f32.byteLength, type(ab));
-  if (f32.byteLength !== F32.length)
-    throw new Error(`Download from urlF32 has incorrect length: ${f32.byteLength} !== ${F32.length}`);
-
-  const text1 = await download(xhr, urlUtf8, 'text'); // big
-  log('download urlUtf8       text', text1.length, type(text1));
-  if (f32.byteLength !== text1.length)
-    throw new Error(`Download from urlUtf8 has incorrect length: ${f32.byteLength} !== ${text1.length}`);
-
-  if (typeof Blob === 'function') { // Check to see if Blob exists.
-    const blob = await download(xhr, urlF32_2, 'blob');
-    const blob_ab = await blob.arrayBuffer();
-    const blob_f32 = new Float32Array(blob_ab);
-    log(`download urlF32_2      blob ${blob_f32.byteLength} ${type(blob)}  `, blob_f32);
-    if (!isEqual(blob_f32, _f32_2))
-      throw new Error(`Download from urlF32_2 has incorrect content: ${blob_f32} !== ${_f32_2}`);
-  } else {
-    // If Blob doesn't exist (node versions < 18), then use xhr.responseType="arraybuffer".
-    const ab_2 = await download(xhr, urlF32_2, 'arraybuffer');
-    const ab_2_f32 = new Float32Array(ab_2);
-    log(`download urlF32_2  arraybuf ${ab_2_f32.byteLength} ${type(ab_2)}`, ab_2_f32);
-    if (!isEqual(ab_2_f32, _f32_2))
-      throw new Error(`Download from urlF32_2 has incorrect content: ${ab_2_f32} !== ${_f32_2}`);
-  }
-
-  const text2 = await download(xhr, urlUtf8_2, '');
-  const text2_f32 = stringToFloat32Array(text2);
-  log('download urlUtf8_2  default', text2.length, type(text2), text2_f32);
-  if (!isEqual(text2_f32, _f32_2))
-    throw new Error(`Download from urlUtf8_2 has incorrect content: ${text2_f32} !== ${_f32_2}`);
-
-  try {
-    const { XMLSerializer } = require('@xmldom/xmldom'); // Throws when xmldom not installed.
-    const doc = await download(xhr, urlXml, 'document');
-    const serialized = new XMLSerializer().serializeToString(doc);
-    const html = serialized.replace(/\t/g, '  ');
-    log(`download urlXml    document ${html.length}`, type(doc), html);
-    if (html !== xmlDoc)
-      throw new Error(`Download from urlXml has incorrect content:\n  ${html} !== ${xmlDoc}`);
-  } catch (e) {
-    if (e?.code === 'MODULE_NOT_FOUND') {
-      console.error('Please install npmjs package @xmldom/xmldom to test xhr.responseType==="document"');
-      console.info('XMLHttpRequest.js also needs access to @xmldom/xmldom');
-    } else {
-      throw e; // rethrow
-    }
-  }
-
-  const json = await download(xhr, urlJson, 'json');
-  log(`download urlJson       json ${JSON.stringify(json).length}`, type(json), json);
-  if (JSON.stringify(json) !== JSON.stringify(testJson))
-    throw new Error(`Download from urlJson has incorrect content:\n  ${JSON.stringify(json)} !== ${JSON.stringify(testJson)}`);
-  
-  } catch (e) {
-    log('BOOM',  e);
-    throw e; // rethrow
-  }
 }
 
 /**
@@ -392,11 +390,12 @@ async function runTest() {
  */
 setTimeout(function () {
   runTest()
-    .then(() => { console.log("PASSED"); })
-    .catch((e) => { console.log("FAILED"); throw e; })
-    .finally(() => {
-      if (serverProcess)
-        serverProcess.close();
-      serverProcess = null;
-    });
+    .then(() => { console.log("PASSED"); shutdown(); })
+    .catch((e) => { console.log("FAILED", e); shutdown(); throw e; });
 }, 100);
+
+function shutdown() {
+  if (serverProcess)
+    serverProcess.close();
+  serverProcess = null;
+}

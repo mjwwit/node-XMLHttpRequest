@@ -18,12 +18,12 @@
 
 var assert = require("assert");
 var http = require("http");
-var { XMLHttpRequest } = require("../lib/XMLHttpRequest");
+var XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 
 var supressConsoleOutput = true;
-function log (...args) {
+function log (_) {
   if ( !supressConsoleOutput)
-    console.debug(...args);
+    console.log(arguments);
 }
 
 var serverProcess;
@@ -79,7 +79,9 @@ function createBuffers(f32) {
   var bufferUtf8 = Buffer.from(ss, 'utf8'); // Encode ss in utf8
   return { buffer, bufferUtf8 };
 }
-var { buffer, bufferUtf8 } = createBuffers(f32);
+var bufs = createBuffers(f32);
+var buffer = bufs.buffer,
+    bufferUtf8 = bufs.bufferUtf8
 
 /**
  * Serves up buffer at
@@ -94,17 +96,17 @@ function createServer(buffer, bufferUtf8) {
   serverProcess = http.createServer(function (req, res) {
     switch (req.url) {
       case "/binary":
-        return res
-          .writeHead(200, {"Content-Type": "application/octet-stream"})
-          .end(buffer);
+        res.writeHead(200, {"Content-Type": "application/octet-stream"})
+        res.end(buffer);
+        return;
       case "/binaryUtf8":
-        return res
-          .writeHead(200, {"Content-Type": "application/octet-stream"})
-          .end(bufferUtf8);
+        res.writeHead(200, {"Content-Type": "application/octet-stream"})
+        res.end(bufferUtf8);
+        return;
       default:
-        return res
-          .writeHead(404, {"Content-Type": "text/plain"})
-          .end("Not found");
+        res.writeHead(404, {"Content-Type": "text/plain"})
+        res.end("Not found");
+        return;
     }
   }).listen(8888);
   process.on("SIGINT", function () {
@@ -146,7 +148,9 @@ function hexStr_to_ta(hexStr) {
  * @param {number} [count=1000]
  * @returns {boolean}
  */
-function checkEnough(ta1, ta2, count = 1000) {
+function checkEnough(ta1, ta2, count) {
+  if (count === undefined)
+    count = 1000
   assert(ta1 && ta2);
   if (ta1.constructor.name !== ta2.constructor.name) return false;
   if (ta1.length !== ta2.length) return false;
@@ -164,8 +168,10 @@ var xhr = new XMLHttpRequest();
 var url = "http://localhost:8888/binary";
 var urlUtf8 = "http://localhost:8888/binaryUtf8";
 
-function download (xhr, url, responseType = 'arraybuffer')
+function download (xhr, url, responseType)
 {
+  if (responseType === undefined)
+    responseType = 'arraybuffer';
   return new Promise(function (resolve, reject) {
     xhr.open("GET", url, true);
 
@@ -208,26 +214,28 @@ function download (xhr, url, responseType = 'arraybuffer')
  * @param {boolean} isUtf8
  * @returns {Promise<Float32Array>}
  */
-async function Get(url, isUtf8) {
-  var dataTxt = await download(xhr, url, 'text');
-  var ab = await download(xhr, url, 'arraybuffer');
-  var data = Buffer.from(ab);
-
-  assert(dataTxt && data);
-
-  log('XHR GET:', dataTxt.length, data.length, data.toString('utf8').length);
-  log('XHR GET:', data.constructor.name, dataTxt.constructor.name);
-
-  if (isUtf8 && dataTxt.length !== data.toString('utf8').length)
-    throw new Error("xhr.responseText !== xhr.response.toString('utf8')");
-
-  var ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
-  log('XHR GET:', ta.constructor.name, ta.length, ta[0], ta[1]);
-
-  if (!checkEnough(ta, f32))
-    throw new Error("Unable to correctly reconstitute Float32Array");
-
-  return ta;
+function Get(url, isUtf8) {
+  return download(xhr, url, 'text').then((dataTxt) => {
+    return download(xhr, url, 'arraybuffer').then((ab) => {
+      var data = Buffer.from(ab);
+    
+      assert(dataTxt && data);
+    
+      log('XHR GET:', dataTxt.length, data.length, data.toString('utf8').length);
+      log('XHR GET:', data.constructor.name, dataTxt.constructor.name);
+    
+      if (isUtf8 && dataTxt.length !== data.toString('utf8').length)
+        throw new Error("xhr.responseText !== xhr.response.toString('utf8')");
+    
+      var ta = isUtf8 ? new Float32Array(hexStr_to_ta(dataTxt)) : new Float32Array(data.buffer);
+      log('XHR GET:', ta.constructor.name, ta.length, ta[0], ta[1]);
+    
+      if (!checkEnough(ta, f32))
+        throw new Error("Unable to correctly reconstitute Float32Array");
+    
+      return ta;
+    })
+  });
 }
 
 /**
@@ -252,11 +260,18 @@ function runTest() {
  */
 setTimeout(function () {
   runTest()
-    .then(function (ta) { console.log("done", ta?.length); })
-    .finally(function () {
+    .then(function (ta) {
+      console.log("done", ta && ta.length);
       if (serverProcess)
         serverProcess.close();
       serverProcess = null;
-    });
+    })
+    .catch(function (e) {
+      console.log("FAILED");
+      if (serverProcess)
+        serverProcess.close();
+      serverProcess = null;
+      throw e;
+    })
 }, 100);
 

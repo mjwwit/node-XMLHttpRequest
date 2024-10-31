@@ -2,19 +2,21 @@
  * Test GET file URL with both async and sync mode.
  * Use xhr.responseType = "arraybuffer".
  */
-
+'use strict';
 var XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest
 
 const supressConsoleOutput = true;
-function log (...args) {
+function log (_) {
   if ( !supressConsoleOutput)
-    console.debug(...args);
+    console.log(arguments);
 }
 
 var url = "file://" + __dirname + "/testBinaryData";
 
-function download (url, isAsync = true) {
-  xhr = new XMLHttpRequest();
+function download (url, isAsync) {
+  if (isAsync === undefined)
+    isAsync = true;
+  var xhr = new XMLHttpRequest();
   return new Promise((resolve, reject) => {
     xhr.open("GET", url, true);
 
@@ -34,10 +36,13 @@ function download (url, isAsync = true) {
   });
 }
 
-async function runTest () {
-  try {
+function runTest () {
   // Async
-  var ab = await download(url, /*isAsyn*/ true);
+  var ab = download(url, /*isAsyn*/ true);
+  return ab.then(afterAsyncDownload);
+}
+
+function afterAsyncDownload(ab) {  
   var str = Buffer.from(ab).toString('binary');
   var strLog = logBinary(str);
   log('async phase', strLog);
@@ -46,16 +51,17 @@ async function runTest () {
   log("done async phase");
 
   // Sync
-  var abSync = await download(url, /*isAsyn*/ false);
+  var abSync = download(url, /*isAsyn*/ false);
+  return abSync.then(afterSyncDownload);
+}
+
+function afterSyncDownload(abSync) {
   var str = Buffer.from(abSync).toString('binary');
   var strLog = logBinary(str);
   log('sync phase', strLog);
   if ("0000 803f 0000 a040 0000 c040 0000 e040" !== strLog)
     throw new Error(`Failed test-request-protocols-binary-data sync phase: "0000 803f 0000 a040 0000 c040 0000 e040" !== ${strLog}`);
   log("done sync phase");
-  } catch (e) {
-    console.error('FAILED', e);
-  }
 }
 
 runTest()
@@ -64,7 +70,12 @@ runTest()
 
 function logBinary(data) {
   function log(data, idx) {
-    return data.charCodeAt(idx).toString(16).padStart(2, '0');
+    const char = data.charCodeAt(idx).toString(16);
+    // node compatibility: padStart doesn't exist to make sure return is 2 characters
+    if (char.length === 1)
+      return '0' + char;
+    else
+      return char;
   }
   if (!data) return 'no data';
   if (typeof data !== 'string') return 'not a string';
