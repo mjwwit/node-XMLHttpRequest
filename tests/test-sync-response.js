@@ -2,6 +2,7 @@
  * Test GET http URL with both async and sync mode.
  * Use xhr.responseType = "" and "arraybuffer".
  */
+'use strict';
 
 var assert = require("assert")
   , spawn = require('child_process').spawn
@@ -9,9 +10,9 @@ var assert = require("assert")
   , serverProcess;
 
 const supressConsoleOutput = true;
-function log (...args) {
+function log (_) {
   if ( !supressConsoleOutput)
-    console.debug(...args);
+    console.log(arguments);
 }
 
 // Running a sync XHR and a webserver within the same process will cause a deadlock
