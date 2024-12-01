@@ -12,7 +12,7 @@ const XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 const supressConsoleOutput = false;
 function log (_) {
   if ( !supressConsoleOutput)
-    console.log(arguments);
+    console.log.apply(console, arguments);
 }
 
 var serverProcess;
@@ -94,12 +94,14 @@ function createServer() {
         res.end(`success:len ${u8.length}`);
       });
     } else {
-      if (!storage[req.url])
+      if (!storage[req.url]) {
         res.writeHead(404, {"Content-Type": "text/plain; charset=utf8"})
         res.end("Not in storage");
-
-      res.writeHead(200, {"Content-Type": "application/octet-stream"})
-      res.end(storage[req.url]);
+      }
+      else {
+        res.writeHead(200, {"Content-Type": "application/octet-stream"})
+        res.end(storage[req.url]);
+      }
     }
   }).listen(8888);
   process.on("SIGINT", function () {
@@ -216,7 +218,7 @@ function afterUpload(r) {
 function afterDownload(ab) {
   clearTimeout(handle);
   console.log(`Download elapsed time:, ${Date.now() - _t0}ms`, ab.byteLength);
-  console.info(['...waiting to see elapsed time of download...'])
+  console.info('...waiting to see elapsed time of download...');
   if (!success)
     throw new Error("Download has taken far too long!");
 }

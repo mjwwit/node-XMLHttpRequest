@@ -12,7 +12,7 @@ var assert = require("assert")
 const supressConsoleOutput = true;
 function log (_) {
   if ( !supressConsoleOutput)
-    console.log(arguments);
+    console.log.apply(console, arguments);
 }
 
 // Running a sync XHR and a webserver within the same process will cause a deadlock

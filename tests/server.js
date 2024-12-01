@@ -3,6 +3,17 @@ var http = require("http");
 
 var server = http.createServer(function (req, res) {
     switch (req.url) {
+        case "/": {
+            var body = "Hello World";
+            res.writeHead(200, {
+                "Content-Type": "text/plain",
+                "Content-Length": Buffer.byteLength(body),
+                "Date": "Thu, 30 Aug 2012 18:17:53 GMT",
+                "Connection": "close"
+            });
+            res.end(body);
+            return;
+        }
         case "/text":
             res.writeHead(200, {"Content-Type": "text/plain"})
             res.end("Hello world!");
@@ -27,8 +38,15 @@ var server = http.createServer(function (req, res) {
             res.end(str);
             return;
         default:
-            res.writeHead(404, {"Content-Type": "text/plain"})
-            res.end("Not found");
+            if (req.url.startsWith('/redirectingResource/')) {
+                let remaining = req.url.replace(/^\/redirectingResource\/*/, "") - 1;
+                res.writeHead(301, {'Location': remaining ? ('http://localhost:8888/redirectingResource/' + remaining) : 'http://localhost:8888/'});
+                res.end();
+            }
+            else {
+                res.writeHead(404, {"Content-Type": "text/plain"})
+                res.end("Not found");
+            }
     }
 }).listen(8888);
 
