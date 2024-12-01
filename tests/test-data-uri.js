@@ -49,7 +49,7 @@ var tests = [
   },
   {
     name: "Test base64-encoded data with no paddings",
-    data: "data:text;base64,SGVsbG8gV29ybGQ=",
+    data: "data:text;base64,SGVsbG8gV29ybGQ",
     output: "Hello World"
   },
   {
