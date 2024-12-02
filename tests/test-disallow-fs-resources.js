@@ -3,7 +3,7 @@ var sys = require("util")
   , XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest
   , xhr;
 
-xhr = new XMLHttpRequest({ allowFileSystemSources: false });
+xhr = new XMLHttpRequest({ allowFileSystemResources: false });
 
 xhr.onreadystatechange = function() {
   if (this.readyState == 4) {
@@ -22,7 +22,7 @@ xhr.send();
 
 // Sync
 var runSync = function() {
-  xhr = new XMLHttpRequest({ allowFileSystemSources: false });
+  xhr = new XMLHttpRequest({ allowFileSystemResources: false });
 
   xhr.onreadystatechange = function() {
     if (this.readyState == 4) {
