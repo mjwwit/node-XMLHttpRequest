@@ -11,7 +11,7 @@ var runTest = function () {
     let xhr = new XMLHttpRequest({ origin: "http://localhost:8888" });
     xhr.open("GET", "text", false);
     xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
+    if (xhr.readyState === 4) {
       assert.equal(xhr.getResponseHeader('Content-Type'), 'text/plain');
       assert.equal(xhr.responseText, "Hello world!");
       console.log("origin test 1: done");
@@ -26,7 +26,7 @@ var runTest = function () {
     let xhr = new XMLHttpRequest({ origin: "http://localhost:8888/text" });
     xhr.open("GET", "", false);
     xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
+      if (xhr.readyState === 4) {
 		assert.equal(xhr.getResponseHeader('Content-Type'), 'text/plain');
         assert.equal(xhr.responseText, "Hello world!");
         console.log("origin test 2: done");
