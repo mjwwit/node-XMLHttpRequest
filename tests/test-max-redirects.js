@@ -11,7 +11,7 @@ var runTest = function () {
     let xhr = new XMLHttpRequest({ maxRedirects: 10 });
     xhr.open("GET", "http://localhost:8888/redirectingResource/10", false);
     xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
+    if (xhr.readyState === 4) {
       assert.equal(xhr.getRequestHeader('Location'), '');
       assert.equal(xhr.responseText, "Hello World");
       console.log("safe redirects count: done");
@@ -26,15 +26,15 @@ var runTest = function () {
     let xhr = new XMLHttpRequest({ maxRedirects: 10 });
     xhr.open("GET", "http://localhost:8888/redirectingResource/20", false);
     xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        assert.equal(xhr.statusText, 'ERR_TOO_MANY_REDIRECTS');
+      if (xhr.readyState === 4) {
+        assert.equal(xhr.statusText, 'Too many redirects');
         assert.equal(xhr.status, 0);
         console.log("excessive redirects count: done");
       }
     };
     xhr.send();
   } catch(e) {
-    
+    if (e.message !== 'Too many redirects') console.log("ERROR: Exception raised", e);
   }
 }
 

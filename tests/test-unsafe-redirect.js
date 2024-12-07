@@ -26,8 +26,8 @@ var server = http.createServer(function (req, res) {
 }).listen(8000);
 
 xhr.onreadystatechange = function() {
-  if (this.readyState == 4) {
-    assert.equal(xhr.statusText, "ERR_UNSAFE_REDIRECT");
+  if (this.readyState === 4) {
+    assert.equal(xhr.statusText, "Unsafe redirect");
     assert.equal(xhr.status, 0);
     console.log("done");
   }

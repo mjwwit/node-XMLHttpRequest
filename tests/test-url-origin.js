@@ -34,7 +34,7 @@ var runTest = function () {
     };
     xhr.send();
   } catch(e) {
-    
+    console.log("ERROR: Exception raised", e);
   }
 }
 

@@ -6,7 +6,7 @@ var sys = require("util")
 xhr = new XMLHttpRequest({ allowFileSystemResources: false });
 
 xhr.onreadystatechange = function() {
-  if (this.readyState == 4) {
+  if (this.readyState === 4) {
     assert.equal(this.statusText, "Not allowed to load local resource: " + url);
     assert.equal(this.status, 0);
     try { runSync(); } catch (e) {
@@ -25,7 +25,7 @@ var runSync = function() {
   xhr = new XMLHttpRequest({ allowFileSystemResources: false });
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4) {
+    if (this.readyState === 4) {
       assert.equal(this.statusText, "Not allowed to load local resource: " + url);
       assert.equal(this.status, 0);
       console.log("done");
