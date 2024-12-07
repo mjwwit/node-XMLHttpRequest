@@ -19,7 +19,7 @@ var tests = [
   },
   {
     name: "Test plain URI Data with data URI headers",
-    data: "data:text/plain;example=1;args=2,Hello%20World",
+    data: "data:base64;example=1;args=2,Hello%20World",
     output: "Hello World"
   },
   {
@@ -40,12 +40,12 @@ var tests = [
   {
     name: "Test normal bass64-encoded data URI with invalid characters",
     data: "data:text;base64,SGV&&&&sbG8gV{29ybGQ=",
-    error: "ERR_INVALID_URL"
+    error: "Invalid data URI"
   },
   {
     name: "Test normal bass64-encoded data URI with invalid characters (url-encoded)",
     data: "data:text;base64,SGV%26%26%26%26sbG8gV%7B29ybGQ%3D",
-    error: "ERR_INVALID_URL"
+    error: "Invalid data URI"
   },
   {
     name: "Test base64-encoded data with no paddings",
@@ -55,7 +55,7 @@ var tests = [
   {
     name: "Test base64-encoded data with excessive paddings",
     data: "data:text;base64,SGVsbG8gV29ybGQ==",
-    error: "ERR_INVALID_URL"
+    error: "Invalid data URI"
   }
 ];
 
