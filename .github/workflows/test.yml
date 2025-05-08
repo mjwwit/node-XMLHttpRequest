@@ -6,6 +6,7 @@ on:
     branches: [ master ]
 jobs:
   integration-tests:
+    if: '!canceled()'
     runs-on: ubuntu-latest
     strategy:
       matrix:
