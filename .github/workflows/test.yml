@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 jobs:
   integration-tests:
-    if: '!cancelled()'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         node-version: [12.x, 20.x, 22.x, 23.x]
     steps:
