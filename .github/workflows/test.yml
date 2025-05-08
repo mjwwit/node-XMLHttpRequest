@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 jobs:
   integration-tests:
-    if: '!canceled()'
+    if: '!cancelled()'
     runs-on: ubuntu-latest
     strategy:
       matrix:
