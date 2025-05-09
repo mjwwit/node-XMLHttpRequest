@@ -29,7 +29,7 @@ var base64Str = function (charset) {
 
 // specify custom decoder to work on older node versions
 var decodeTextFromBuffer = function (buf, enc) {
-  if (enc == "iso-8859-1") enc = "latin1";
+  if (enc == "iso-8859-1") return buf.toString("latin1");
   return new TextDecoder(enc).decode(buf);
 }
 
