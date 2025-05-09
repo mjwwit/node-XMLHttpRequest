@@ -69,12 +69,12 @@ Non-standard options for this module are passed through the `XMLHttpRequest` con
 		<tr>
             <td><code>allowFileSystemResources</code></td>
 			<td><code>true</code></td>
-			<td>Allows user to control access to the local filesystem through the <code>file:</code> protocol</td>
+			<td>Allows control access to the local filesystem through the <code>file:</code> protocol</td>
         </tr>
 		<tr>
             <td><code>origin</code></td>
 			<td><code>undefined</code></td>
-			<td>Allows user to set a base URL for the request. The resulting request URL will be constructed as follows <code>new URL(url, origin)</code></td>
+			<td>Set a base URL for the requests called using this instance. The resulting request URL will be constructed as follows: <code>new URL(url, origin)</code></td>
         </tr>
 		<tr>
             <td><code>syncPolicy</code></td>
@@ -92,9 +92,9 @@ Non-standard options for this module are passed through the `XMLHttpRequest` con
 			<td>Specify a parser (non-async) to parse document from text when <code>xhr.responseType</code> is either <code>"document"</code> or in text format. If the parser is invalid or omitted, <code>xhr.responseXML</code> will be <code>null</code></td>
         </tr>
 		<tr>
-            <td><code>textEncoder</code></td>
+            <td><code>textDecoder</code></td>
 			<td><code>TextDecoder</code> or <code>buf.toString(enc)</code> depending on Node version</td>
-			<td>Specify a text decoder, accepting a buffer <code>buf</code> and encoding <code>enc</code> to decode to desired encoding.<br>Note that <code>TextDecoder</code> at version 12 does not support a wide range of encodings than later node version does</td>
+			<td>Specify a text decoder (non-async), accepting a buffer <code>buf</code> and encoding <code>enc</code> to decode to desired encoding.<br>Note that <code>TextDecoder</code> at version 12 does not support a wide range of encodings than later node version does</td>
         </tr>
     </tbody>
 </table>
