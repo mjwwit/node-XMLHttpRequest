@@ -26,8 +26,19 @@ const body = Buffer.from([
 var base64Str = function (charset) {
   return "data:text/plain;base64;charset=" + charset + "," + body.toString('base64');
 }
-var plainStr = new TextDecoder("iso-8859-1").decode(body);
-var plainStrUTF8 = new TextDecoder("utf-8").decode(body);
+
+// specify custom decoder to work on older node versions
+var decodeTextFromBuffer = function (buf, enc) {
+  if (enc == "iso-8859-1") enc = "latin1";
+  return new TextDecoder(enc).decode(buf);
+}
+
+var plainStr = decodeTextFromBuffer(body, "iso-8859-1");
+var plainStrUTF8 = decodeTextFromBuffer(body, "utf-8");
+
+var createXHRInstance = function (opts) {
+  return new XMLHttpRequest(Object.assign({ textDecoder: decodeTextFromBuffer }, opts));
+}
 
 // spawn a server
 serverProcess = spawn(process.argv[0], [__dirname + "/server.js"], { stdio: 'inherit' });
@@ -100,7 +111,7 @@ var runSyncTest = function (i) {
   var test = tests[i];
   var index = i + 1;
   try {
-    var xhr = new XMLHttpRequest();
+    var xhr = createXHRInstance();
     console.log("Test " + index + ": [SYNC] " + test.name);
     xhr.open("GET", test.endpoint, false);
     if (test.override) xhr.overrideMimeType(test.override);
@@ -125,7 +136,7 @@ var runAsyncTest = function (i) {
   var test = tests[i];
   var index = i + tests.length + 1;
   try {
-    var xhr = new XMLHttpRequest();
+    var xhr = createXHRInstance();
     console.log("Test " + index + ": [ASYNC] " + test.name);
     xhr.open("GET", test.endpoint);
     if (test.override) xhr.overrideMimeType(test.override);
