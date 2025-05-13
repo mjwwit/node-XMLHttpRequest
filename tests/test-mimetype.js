@@ -37,7 +37,7 @@ var plainStr = decodeTextFromBuffer(body, "iso-8859-1");
 var plainStrUTF8 = decodeTextFromBuffer(body, "utf-8");
 
 var createXHRInstance = function (opts) {
-  return new XMLHttpRequest(Object.assign({ textDecoder: decodeTextFromBuffer }, opts));
+  return new XMLHttpRequest(Object.assign({ textDecoder: null }, opts));
 }
 
 // spawn a server
