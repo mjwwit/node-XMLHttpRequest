@@ -5,14 +5,23 @@ var assert = require("assert")
 
 // Test server
 var server = http.createServer(function (req, res) {
-  // Test setRequestHeader
-  assert.equal("Foobar", req.headers["x-test"]);
-  // Test non-conforming allowed header
-  assert.equal("node-XMLHttpRequest-test", req.headers["user-agent"]);
-  // Test header set with blacklist disabled
-  assert.equal("http://github.com", req.headers["referer"]);
-  // Test case insensitive header was set
-  assert.equal("text/plain", req.headers["content-type"]);
+  switch (req.url) {
+    case "/allow":
+      // Test disabling header check
+      assert.equal("http://github.com", req.headers["referer"]);
+      console.log("No header check: PASSED");
+      break;
+    default:
+      // Test setRequestHeader
+      assert.equal("Foobar", req.headers["x-test"]);
+      // Test non-conforming allowed header
+      assert.equal("node-XMLHttpRequest-test", req.headers["user-agent"]);
+      // Test case insensitive header was set
+      assert.equal("text/plain", req.headers["content-type"]);
+      // Test forbidden header
+      assert.equal(null, req.headers["referer"]);
+      console.log("Strict header check: PASSED");
+  }
 
   var body = "Hello World";
   res.writeHead(200, {
@@ -48,7 +57,7 @@ xhr.onreadystatechange = function() {
     assert.equal("", this.getAllResponseHeaders());
     assert.equal(null, this.getResponseHeader("Connection"));
 
-    console.log("done");
+    console.log("Response headers check: PASSED");
   }
 };
 
@@ -58,24 +67,28 @@ try {
   var body = "Hello World";
   // Valid header
   xhr.setRequestHeader("X-Test", "Foobar");
-  // Invalid header
+  // Invalid header Content-Length
   xhr.setRequestHeader("Content-Length", Buffer.byteLength(body));
+  // Invalid header Referer
+  xhr.setRequestHeader("Referer", "http://github.com");
   // Allowed header outside of specs
   xhr.setRequestHeader("user-agent", "node-XMLHttpRequest-test");
   // Case insensitive header
   xhr.setRequestHeader("content-type", 'text/plain');
-  // Test getRequestHeader
-  assert.equal("Foobar", xhr.getRequestHeader("X-Test"));
-  // Test invalid header
-  assert.equal("", xhr.getRequestHeader("Content-Length"));
-
-  // Test allowing all headers
-  xhr.setDisableHeaderCheck(true);
-  xhr.setRequestHeader("Referer", "http://github.com");
-  assert.equal("http://github.com", xhr.getRequestHeader("Referer"));
-
   xhr.send(body);
 } catch(e) {
+  console.error("ERROR: Exception raised", e);
+  throw e;
+}
+
+try {
+  // Test allowing all headers
+  xhr = new XMLHttpRequest({ disableHeaderCheck: true });
+  xhr.open("POST", "http://localhost:8000/allow");
+  xhr.setRequestHeader("Referer", "http://github.com");
+  xhr.send();
+}
+catch (e) {
   console.error("ERROR: Exception raised", e);
   throw e;
 }

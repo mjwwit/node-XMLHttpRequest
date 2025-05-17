@@ -1,8 +1,5 @@
 var assert = require("assert")
-  , XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest
-  , xhr;
-
-xhr = new XMLHttpRequest();
+  , XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 
 // define test data
 var tests = [
@@ -63,7 +60,7 @@ var tests_passed = 0;
 var runAsyncTest = function (test) {
   console.log("  ASYNC");
 
-  xhr = new XMLHttpRequest;
+  var xhr = new XMLHttpRequest;
   xhr.open("get", test.data);
   xhr.onreadystatechange = function () {
     if (this.readyState === 4) {
@@ -75,7 +72,7 @@ var runAsyncTest = function (test) {
         assert.equal(xhr.status, 200);
         assert.equal(xhr.responseText, test.output);
       }
-      console.log("    --> SUCESS");
+      console.log("    --> SUCCESS");
       ++tests_passed;
     }
   }
@@ -85,7 +82,7 @@ var runAsyncTest = function (test) {
 var runSyncTest = function (test) {
   console.log("  SYNC");
 
-  xhr = new XMLHttpRequest;
+  var xhr = new XMLHttpRequest;
   xhr.open("get", test.data, false);
   try {
     xhr.send();
@@ -108,7 +105,13 @@ var startTest = function () {
   let test = tests[i];
 
   if (!test) {
-    console.log("Done:", tests_passed === tests.length * 2 ? "PASS" : "FAILED");
+    console.log(tests_passed, "/", tests.length * 2, "tests passed");
+    if (tests_passed === tests.length * 2)
+      console.log("Done: PASS");
+    else {
+      console.error("Done: FAILED");
+      throw "";
+    }
     return;
   }
 

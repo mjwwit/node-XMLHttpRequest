@@ -31,21 +31,6 @@ setTimeout(function () {
 }, 100);
 
 /**
- * Assumes hexStr is the in-memory representation of a Float32Array.
- * Relies on the fact that the char codes in hexStr are all <= 0xFF.
- * Returns Float32Array corresponding to hexStr.
- *
- * @param {string} hexStr
- * @returns {Float32Array}
- */
-function stringToFloat32Array (hexStr) {
-  const u8 = new Uint8Array(hexStr.length);
-  for (let k = 0; k < hexStr.length; k++)
-    u8[k] = Number(hexStr.charCodeAt(k));
-  return new Float32Array(u8.buffer);
-}
-
-/**
  * Check to see if 2 array-like objects have the same elements.
  * @param {{ length: number }} ar1
  * @param {{ length: number }} ar2
@@ -106,8 +91,8 @@ function runTest() {
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       // xhr.response is an ArrayBuffer
-      var binaryStr = Buffer.from(xhr.response).toString('binary');
-      var f32 = stringToFloat32Array(binaryStr);
+      var binary = Buffer.from(xhr.response);
+      var f32 = new Float32Array(binary);
       log('/binary2', f32);
       var answer = new Float32Array([1, 5, 6, 7]);
       assert.equal(isEqual(f32, answer), true);

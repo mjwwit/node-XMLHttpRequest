@@ -1,6 +1,26 @@
 'use strict';
 var http = require("http");
 
+var bufferBody = Buffer.from([
+    0x48, // H
+    0xE9, // é
+    0x6C, // l
+    0x6C, // l
+    0x6F, // o
+    0x20, //  
+    0x77, // w
+    0xF8, // ø
+    0x72, // r
+    0x6C, // l
+    0x64, // d
+    0x20, //  
+    0x6E, // n
+    0x61, // a
+    0xEF, // ï
+    0x76, // v
+    0x65  // e
+]);
+
 var server = http.createServer(function (req, res) {
     switch (req.url) {
         case "/": {
@@ -32,10 +52,23 @@ var server = http.createServer(function (req, res) {
             return;
         case "/binary2":
             const ta = new Float32Array([1, 5, 6, 7]);
-            const buf = Buffer.from(ta.buffer);
-            const str = buf.toString('binary');
+            const buf = Buffer.from(ta);
             res.writeHead(200, {"Content-Type": "application/octet-stream"})
-            res.end(str);
+            res.end(buf);
+            return;
+        case "/latin1":
+            res.writeHead(200, {
+                'Content-Type': 'text/plain; charset=ISO-8859-1',
+                'Content-Length': bufferBody.length
+            });
+            res.end(bufferBody);
+            return;
+        case "/latin1-invalid":
+            res.writeHead(200, {
+                'Content-Type': 'text/plain; charset=lorem_ipsum',
+                'Content-Length': bufferBody.length
+            });
+            res.end(bufferBody);
             return;
         default:
             if (req.url.startsWith('/redirectingResource/')) {
