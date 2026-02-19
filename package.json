@@ -9,12 +9,7 @@
     "xhr",
     "ajax"
   ],
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://creativecommons.org/licenses/MIT/"
-    }
-  ],
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git://github.com/mjwwit/node-XMLHttpRequest.git"
