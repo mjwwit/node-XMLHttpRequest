@@ -10,11 +10,11 @@ var runTest = function () {
     let xhr = new XMLHttpRequest({ maxRedirects: 10 });
     xhr.open("GET", "http://localhost:8888/redirectingResource/10", false);
     xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      // assert.equal(xhr.getRequestHeader('Location'), '');
-      assert.equal(xhr.responseText, "Hello World");
-      console.log("safe redirects count: done");
-    }
+      if (xhr.readyState === 4) {
+        // assert.equal(xhr.getRequestHeader('Location'), '');
+        assert.equal(xhr.responseText, "Hello World");
+        console.log("safe redirects count: done");
+      }
     };
     xhr.send();
   } catch(e) {

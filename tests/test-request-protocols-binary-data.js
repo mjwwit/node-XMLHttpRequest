@@ -3,7 +3,7 @@
  * Use xhr.responseType = "arraybuffer".
  */
 'use strict';
-var XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest
+var XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest;
 
 const supressConsoleOutput = true;
 function log (_) {

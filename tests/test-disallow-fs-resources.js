@@ -1,4 +1,5 @@
 var assert = require("assert")
+  , path = require("path")
   , XMLHttpRequest = require("../lib/XMLHttpRequest").XMLHttpRequest
   , xhr;
 
@@ -19,7 +20,12 @@ xhr.onreadystatechange = function() {
 };
 
 // Async
-var url = "file://" + __dirname + "/testdata.txt";
+var re = new RegExp(path.sep.replace("\\", "\\\\"), "g");
+var p = (__dirname + "/testdata.txt").replace(re, path.posix.sep);
+if (!p.startsWith('/')) {
+  p = "/" + p;
+}
+var url = "file://" + p;
 xhr.open("GET", url);
 xhr.send();
 
