@@ -1,0 +1,13 @@
+{
+	"plugins": ["typescript", "node", "import", "vitest"],
+	"categories": {
+		"correctness": "error"
+	},
+	"rules": {
+		"typescript/no-explicit-any": "error",
+		"typescript/no-floating-promises": "error",
+		"typescript/no-misused-promises": "error",
+		"curly": ["error", "all"]
+	},
+	"ignorePatterns": ["dist/**", "types/**"]
+}

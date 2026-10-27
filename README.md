@@ -1,146 +1,116 @@
-# node-XMLHttpRequest #
+# xmlhttprequest-ssl
 
-Fork of [node-XMLHttpRequest](https://github.com/driverdan/node-XMLHttpRequest) by [driverdan](http://driverdan.com). Forked and published to npm because a [pull request](https://github.com/rase-/node-XMLHttpRequest/commit/a6b6f296e0a8278165c2d0270d9840b54d5eeadd) is not being created and merged. Changes made by [rase-](https://github.com/rase-/node-XMLHttpRequest/tree/add/ssl-support) are needed for [engine.io-client](https://github.com/Automattic/engine.io-client).
+A dependency-free XMLHttpRequest implementation for Node.js 24+, written in strict TypeScript. Supports HTTP, HTTPS, file and data URLs, asynchronous and synchronous requests, and CommonJS and ESM from one shared implementation.
 
-## Usage ## 
+```ts
+import { XMLHttpRequest } from 'xmlhttprequest-ssl'
 
-Here's how to include the module in your project and use as the browser-based
-XHR object.
+const xhr = new XMLHttpRequest()
+xhr.open('GET', 'https://example.com')
+xhr.onload = () => console.log(xhr.status, xhr.responseText)
+xhr.onerror = () => console.error('Network error')
+xhr.send()
+```
 
-	var XMLHttpRequest = require("xmlhttprequest-ssl").XMLHttpRequest;
-	var xhr = new XMLHttpRequest();
+Both existing CommonJS forms remain supported:
 
-Note: use the lowercase string "xmlhttprequest-ssl" in your require(). On
-case-sensitive systems (eg Linux) using uppercase letters won't work.
+```js
+const XMLHttpRequest = require('xmlhttprequest-ssl')
+const { XMLHttpRequest: NamedXMLHttpRequest } = require('xmlhttprequest-ssl')
+```
 
-## Non-standard features ##
-### Additional options ###
+Default and named ESM exports and both CommonJS forms use the same constructor. The CommonJS entry point is `dist/index.js`. Published JavaScript requires no TypeScript loader. Declarations use TypeScript's DOM interfaces; TypeScript consumers should include `DOM` and `DOM.Iterable` in `compilerOptions.lib` and install `@types/node` for Node-specific options.
 
-Non-standard options for this module are passed through the `XMLHttpRequest` constructor. Here is the list of all options:
+## API
 
-<table>
-    <thead>
-        <tr>
-            <th>Option</th>
-            <th>Default value</th>
-            <th>Description</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>ca</code></td>
-            <td rowspan="6"><code>undefined</code></td>
-            <td rowspan="7">Control <code>https:</code> requests, you can find their functionality in the <a href="https://nodejs.org/api/https.html#httpsrequestoptions-callback">Nodejs Documentation</a></td>
-        </tr>
-        <tr>
-            <td><code>cert</code></td>
-        </tr>
-        <tr>
-            <td><code>ciphers</code></td>
-        </tr>
-		<tr>
-            <td><code>key</code></td>
-        </tr>
-		<tr>
-            <td><code>passhphrase</code></td>
-        </tr>
-		<tr>
-            <td><code>pfx</code></td>
-        </tr>
-		<tr>
-            <td><code>rejectUnauthorized</code></td>
-			<td><code>true</code></td>
-        </tr>
-		<tr>
-            <td><code>agent</code></td>
-			<td><code>undefined</code></td>
-			<td>Allows to specify a <a href="https://nodejs.org/api/https.html#class-httpsagent">Nodejs Agent</a> instance, allowing connection reuse</td>
-        </tr>
-		<tr>
-            <td><code>autoUnref</code></td>
-			<td><code>false</code></td>
-			<td>Set to any truthy value to prevent a process from not exiting naturally because a request socket from this module is still open</td>
-        </tr>
-		<tr>
-            <td><code>maxRedirects</code></td>
-			<td><code>20</code></td>
-			<td>Allows control over the maximum number of redirects that are followed</td>
-        </tr>
-		<tr>
-            <td><code>allowFileSystemResources</code></td>
-			<td><code>true</code></td>
-			<td>Allows control access to the local filesystem through the <code>file:</code> protocol</td>
-        </tr>
-		<tr>
-            <td><code>origin</code></td>
-			<td><code>undefined</code></td>
-			<td>Set a base URL for the requests called using this instance. The resulting request URL will be constructed as follows: <code>new URL(url, origin)</code></td>
-        </tr>
-		<tr>
-            <td><code>syncPolicy</code></td>
-			<td><code>"warn"</code></td>
-			<td>Control feature behavior of the synchronous feature:<ul><li><code>"disabled"</code>: Disable the feature completely, throws error after calling <code>.send()</code> if in synchronous mode</li><li><code>"warn"</code>: Enable the feature, but show a warning when calling <code>.open()</code> with synchronous mode</li><li><code>"enabled"</code>: Enable the feature without showing any additional warnings or errors</li></ul></td>
-        </tr>
-		<tr>
-            <td><code>disableHeaderCheck</code></td>
-			<td><code>false</code></td>
-			<td>Disable the check against forbidden headers to be added to a XHR request</td>
-        </tr>
-		<tr>
-            <td><code>xmlParser</code></td>
-			<td>none</td>
-			<td>Specify a parser (non-async) to parse document from text when <code>xhr.responseType</code> is either <code>"document"</code> or in text format. If the parser is invalid or omitted, <code>xhr.responseXML</code> will be <code>null</code></td>
-        </tr>
-		<tr>
-            <td><code>textDecoder</code></td>
-			<td><code>TextDecoder</code> or <code>buf.toString(enc)</code> depending on Node version</td>
-			<td>Specify a text decoder (non-async), accepting a buffer <code>buf</code> and encoding <code>enc</code> to decode to desired encoding.<br>Note that <code>TextDecoder</code> at version 12 does not support a wide range of encodings than later node version does</td>
-        </tr>
-    </tbody>
-</table>
+The public API has the DOM XMLHttpRequest shape: ready-state constants, `open`, `send`, `abort`, header accessors, `overrideMimeType`, `timeout`, `withCredentials`, `upload`, event listeners and event handler properties. Response types are `""`, `text`, `json`, `arraybuffer`, `blob` and `document`. Events are real `Event`/progress-event objects with `target`, `loaded`, `total` and `lengthComputable` where applicable.
 
-### Additional methods ###
-`XMLHttpRequest` object created using this library exposes `xhr.getRequestHeader(header_name)` method to retrieve any header content by name in the request headers list. This feature is deprecated and will be removed in future releases.
+Request bodies include strings, `URLSearchParams`, `ArrayBuffer`, array-buffer views (including Buffer), Blob, FormData and caller-serialized Document objects. GET and HEAD ignore bodies. Redirects follow HTTP method/body rules and remove sensitive headers when crossing origins. Response cookie headers are hidden.
 
-# Original README #
+This is a server-side API: CORS is not enforced, there is no automatic cookie jar, and `withCredentials` validates and stores its value without adding browser credential storage. `origin` is a URL base, not a browser security boundary. HTML/XML DOM parsing and Document serialization require caller-supplied hooks.
 
-## Versions ##
+## Synchronous requests
 
-Version 2.0.0 introduces a potentially breaking change concerning local file system requests.
-If these requests fail this library now returns the `errno` (or -1) as the response status code instead of
-returning status code 0.
+```ts
+const xhr = new XMLHttpRequest({ syncPolicy: 'enabled' })
+xhr.open('GET', 'https://example.com', false)
+xhr.timeout = 5000
+xhr.send()
+console.log(xhr.responseText)
+```
 
-Prior to 1.4.0 version numbers were arbitrary. From 1.4.0 on they conform to
-the standard major.minor.bugfix. 1.x shouldn't necessarily be considered
-stable just because it's above 0.x.
+A Node worker executes the same transport as asynchronous requests. The caller sleeps using `Atomics.wait`; a message port carries the result and shared memory wakes the caller. No temporary files, generated JavaScript or busy-spinning are used.
 
-Since the XMLHttpRequest API is stable this library's API is stable as
-well. Major version numbers indicate significant core code changes.
-Minor versions indicate minor core code changes or better conformity to
-the W3C spec.
+Synchronous calls block the calling event loop. A server on that same event loop cannot answer the request. Use another process or worker for local servers. `timeout = 0` imposes no network deadline; positive values throw `TimeoutError` when exceeded. Worker heartbeat monitoring separately fails with `NetworkError` after 30 seconds without worker activity, including startup failure. This is infrastructure failure detection, not a default request timeout.
 
-## License ##
+Node uses worker-style XHR rules, including on its main thread: synchronous timeout and binary/JSON responses are supported. `document` responses are an explicit Node extension using the parser hook. Network failures throw `NetworkError`; synchronous failures emit no error/timeout events. Custom Agent instances are rejected for synchronous requests because they cannot cross the worker boundary. Parser, decoder and serializer hooks execute on the calling thread.
 
-MIT license. See LICENSE for full details.
+## Node options
 
-## Supports ##
+Pass options to the constructor. Options are also available as the ESM `Options` type.
 
-* Async and synchronous requests
-* GET, POST, PUT, and DELETE requests
-* All spec methods (open, send, abort, getRequestHeader,
-  getAllRequestHeaders, event methods)
-* Requests to all domains
+| Option                                              | Default       | Behavior                                                        |
+| --------------------------------------------------- | ------------- | --------------------------------------------------------------- |
+| `pfx`, `key`, `passphrase`, `cert`, `ca`, `ciphers` | unset         | Node HTTPS/TLS request options                                  |
+| `rejectUnauthorized`                                | `true`        | Verify TLS certificates                                         |
+| `agent`                                             | disabled      | Node HTTP/HTTPS Agent; asynchronous requests only               |
+| `autoUnref`                                         | `false`       | Unref request sockets and timeout timers                        |
+| `allowFileSystemResources`                          | `true`        | Allow `file:` reads; GET only                                   |
+| `maxRedirects`                                      | `20`          | Maximum followed redirects                                      |
+| `origin`                                            | unset         | Base URL for relative URLs                                      |
+| `syncPolicy`                                        | `"warn"`      | `"warn"`, `"enabled"` or `"disabled"`                           |
+| `disableHeaderCheck`                                | `false`       | Allow otherwise forbidden request headers                       |
+| `xmlParser`                                         | unset         | `(text: string) => Document \| null`; parse XML/HTML responses  |
+| `documentSerializer`                                | unset         | `(document: Document) => string`; required for `send(Document)` |
+| `textDecoder`                                       | `TextDecoder` | `(buffer: Buffer, encoding: string) => string`                  |
 
-## Known Issues / Missing Features ##
+Without a parser, `responseXML`/document responses return `null`. Sending a Document without a serializer throws `TypeError`. Deprecated `getRequestHeader(name)` remains available as a Node extension.
 
-For a list of open issues or to report your own visit the [github issues
-page](https://github.com/driverdan/node-XMLHttpRequest/issues).
+## Development
 
-* Local file access may have unexpected results for non-UTF8 files
-* Synchronous requests don't set headers properly
-* Synchronous requests freeze node while waiting for response (But that's what you want, right? Stick with async!).
-* Some events are missing, such as abort
-* getRequestHeader is case-sensitive
-* Cookies aren't persisted between requests
-* Missing XML support
-* Missing basic auth
+Use Node 24+ and pnpm 12 (exact version pinned in `package.json`).
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm typecheck
+pnpm lint
+pnpm format:check
+pnpm test
+pnpm test:package
+```
+
+Run the TypeScript example directly with Node after building the package:
+
+```sh
+pnpm build
+node example/demo.mts
+```
+
+Pass a URL as the first argument to try another endpoint, for example `node example/demo.mts 'data:,Hello%20World'`.
+
+`pnpm format` applies Oxfmt formatting. Oxlint includes type-aware rules. TypeScript 7 checks production code, the example, colocated tests, DOM assignability and both package export styles. `pnpm check` runs all gates.
+
+`pnpm test:package` runs `scripts/package.mts` directly with Node. It uses `pnpm pack` (including the `prepack` build), then runs and typechecks the fixtures from `scripts/fixtures/package` against the extracted package in a temporary consumer directory.
+
+`src/xhr.ts` owns the API and state transitions. Separate modules own events, headers, body conversion, response decoding, options, HTTP/resource transport and the synchronous worker bridge. Colocated Vitest tests include the coverage migrated from all 25 original compatibility test files, including the 400 MB transfer regression and its five-second download gate. Shared HTTP/TLS fixtures live in `src/test-support` and are excluded from production builds. Selected Web Platform Tests are adapted with provenance and license in [src/wpt.test.md](src/wpt.test.md). This is not a claim of complete WPT conformance.
+
+CI runs runtime tests on Linux, macOS and Windows with Node 24 and 26; static checks and packed-package checks run once on Linux.
+
+## Migrating from 4.x
+
+This is a major release. Node versions below 24 are no longer supported. Standards behavior takes precedence over historical quirks:
+
+- The `lib/XMLHttpRequest` deep import has been removed. Import from `xmlhttprequest-ssl` instead.
+- Network errors expose status `0` and empty `statusText`. Synchronous errors throw DOMException and do not dispatch failure events.
+- Forbidden `setRequestHeader` calls return `undefined` and ignore the header. Response headers are sorted and each line ends in CRLF.
+- `responseText` throws `InvalidStateError` for non-text response types. `open()` preserves `responseType`; reset it explicitly when reusing an instance for text responses.
+- Invalid/unknown text encodings fall back to UTF-8. Data URLs follow standard parsing: `;base64` must be the final metadata token.
+- Event dispatch is synchronous when the algorithm fires the event; duplicate listeners are deduplicated. State/event callbacks may reopen or abort requests without allowing stale results to overwrite the new request.
+- Custom synchronous agents now fail explicitly instead of being silently ignored.
+
+Compatibility coverage now lives beside the source modules, with assertions updated for these intentional spec changes. File URL tests generate temporary fixtures and use `pathToFileURL` for Windows support; text and binary resources exercise both synchronous and asynchronous requests.
+
+## License
+
+MIT. A TypeScript rewrite of [node-XMLHttpRequest](https://github.com/driverdan/node-XMLHttpRequest), originally developed by driverdan, with SSL support from [rase-](https://github.com/rase-/node-XMLHttpRequest). Earlier compatibility tests informed the current test suite. Adapted Web Platform Tests retain their separate BSD 3-Clause notice.

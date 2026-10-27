@@ -1,35 +1,61 @@
 {
-  "name": "xmlhttprequest-ssl",
-  "description": "XMLHttpRequest for Node",
-  "version": "4.0.0",
-  "author": {
-    "name": "Michael de Wit"
-  },
-  "keywords": [
-    "xhr",
-    "ajax"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/mjwwit/node-XMLHttpRequest.git"
-  },
-  "bugs": "http://github.com/mjwwit/node-XMLHttpRequest/issues",
-  "engines": {
-    "node": ">=13.0.0"
-  },
-  "scripts": {
-    "test": "cd ./tests && node run-test.js"
-  },
-  "directories": {
-    "lib": "./lib",
-    "example": "./example"
-  },
-  "files": [
-    "lib/XMLHttpRequest.js",
-    "LICENSE",
-    "README.md"
-  ],
-  "main": "./lib/XMLHttpRequest.js",
-  "dependencies": {}
+	"name": "xmlhttprequest-ssl",
+	"version": "5.0.0",
+	"description": "XMLHttpRequest for Node",
+	"bugs": "https://github.com/mjwwit/node-XMLHttpRequest/issues",
+	"license": "MIT",
+	"author": {
+		"name": "Michael de Wit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mjwwit/node-XMLHttpRequest.git"
+	},
+	"files": [
+		"dist",
+		"LICENSE",
+		"README.md",
+		"THIRD_PARTY_NOTICES.md",
+		"licenses"
+	],
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm.d.mts",
+				"default": "./dist/esm.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"scripts": {
+		"build": "rimraf dist && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p types/tsconfig.json",
+		"lint": "oxlint --type-aware --deny-warnings",
+		"format": "oxfmt .",
+		"format:check": "oxfmt --check .",
+		"test": "pnpm build && vitest run",
+		"test:package": "node scripts/package.mts",
+		"check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:package",
+		"prepack": "pnpm build"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@types/node": "^24.19.2",
+		"oxfmt": "0.74.0",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2005",
+		"rimraf": "^6.1.3",
+		"typescript": "7.0.2",
+		"vitest": "5.0.5"
+	},
+	"engines": {
+		"node": ">=24"
+	},
+	"packageManager": "pnpm@12.15.0"
 }
